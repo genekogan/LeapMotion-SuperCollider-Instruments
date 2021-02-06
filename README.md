@@ -3,10 +3,10 @@
 A series of SuperCollider sound instruments controlled by the Leap Motion hand tracker.
 
 Pre-requisities:
-* [http://supercollider.sf.net/](SuperCollider)
-* [http://www.processing.org](Processing)
-* [http://www.leapmotion.com](Leap Motion)
-* [http://www.onformative.com/lab/leapmotionp5/](LeapMotion Processing library)
+* [SuperCollider](http://supercollider.sf.net/)
+* [Processing](http://www.processing.org)
+* [Leap Motion](http://www.leapmotion.com)
+* [LeapMotion Processing library](http://www.onformative.com/lab/leapmotionp5/)
 
 ## Example
 
