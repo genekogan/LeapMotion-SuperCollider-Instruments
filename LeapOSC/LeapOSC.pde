@@ -1,6 +1,4 @@
-import com.onformative.leap.LeapMotionP5;
-import com.leapmotion.leap.*;
-import com.leapmotion.leap.Gesture.*;
+import de.voidplus.leapmotion.*;
 import oscP5.*;
 import netP5.*;
 
@@ -17,7 +15,7 @@ boolean OSC_HAND_SIZE_TRIGGER = true;
 float HAND_THRESH_MIN = 0.15;
 float HAND_THRESH_MAX = 0.45;
 
-LeapMotionP5 leap;
+LeapMotion leap;
 OscP5 oscP5;
 NetAddress myRemoteLocation;
 float[] handSize;
@@ -34,12 +32,27 @@ void setup() {
   myRemoteLocation = new NetAddress("127.0.0.1", 57120);
 
   // setup leap + osc
-  leap = new LeapMotionP5(this);
+  leap = new LeapMotion(this);
+  leap.allowGestures();
+  
   oscP5 = new OscP5(this, 12000);
   myRemoteLocation = new NetAddress("127.0.0.1", 57120);
-  
-  // enable gestures
-  leap.enableGesture(Type.TYPE_SWIPE);
+}
+
+void leapOnInit() {
+  println("Leap Motion Init");
+}
+void leapOnConnect() {
+   println("Leap Motion Connect");
+}
+void leapOnFrame() {
+   //println("Leap Motion Frame");
+}
+void leapOnDisconnect() {
+   println("Leap Motion Disconnect");
+}
+void leapOnExit() {
+   println("Leap Motion Exit");
 }
 
 void draw() 
@@ -57,18 +70,18 @@ void draw()
 
   // get leap data on hands/fingers
   handSize = new float[]{0, 0};
-  ArrayList<Hand> hands = leap.getHandList();
-  for (int h=0; h<min(hands.size(),2); h++) {
-    Hand hand = hands.get(h);
 
+  ArrayList<Hand> hands = leap.getHands();
+  for (int h=0; h<min(2, hands.size()); h++) {
+    Hand hand = hands.get(h);
     // get wrist rotations
-    float pitch = radians(leap.getPitch(hand));
-    float roll = radians(leap.getRoll(hand));
-    float yaw = radians(leap.getYaw(hand));
+    float pitch = radians(hand.getPitch());
+    float roll = radians(hand.getRoll());
+    float yaw = radians(hand.getYaw());
 
     // get hand statistics    
-    handPosition[h] = leap.getPosition(hand);
-    float handRadius = leap.getSphereRadius(hand);
+    handPosition[h] = hand.getPosition();
+    float handRadius = hand.getSphereRadius();
     handPosition[h].set(
         constrain(map(handPosition[h].x, -100, 600, 0, 1), 0, 1),
         constrain(map(handPosition[h].y,  600,   0, 0, 1), 0, 1),
@@ -79,13 +92,21 @@ void draw()
       sendOSCMessage("/h"+(h+1)+"axis/", new float[]{pitch, roll, yaw});
     
     // get finger positions and bounding box
-    ArrayList<Finger> fingers = leap.getFingerList(hand);
+    // = new ArrayList<Finger>();
+    //fingers.add(hand.getThumb());
+    //fingers.add(hand.getIndexFinger());
+    //fingers.add(hand.getMiddleFinger());
+    //fingers.add(hand.getRingFinger());
+    //fingers.add(hand.getPinkyFinger());
+    
+    ArrayList<Finger> fingers = hand.getFingers();
+    
     PVector minFinger = new PVector(1,1,1);
     PVector maxFinger = new PVector(0,0,0);
     PVector[] fingerPos = new PVector[fingers.size()];
     for (int f=0; f<fingers.size(); f++) {
       Finger finger = fingers.get(f);
-      fingerPos[f] = leap.getTip(finger);
+      fingerPos[f] = finger.getPosition();
       fingerPos[f].set(
         constrain(map(fingerPos[f].x, -100, 600, 0, 1), 0, 1),
         constrain(map(fingerPos[f].y,  600,   0, 0, 1), 0, 1),
@@ -196,20 +217,28 @@ void draw()
   }
 }
 
-public void swipeGestureRecognized(SwipeGesture gesture) {
-  if (gesture.state() == State.STATE_STOP) {
-    System.out.println("//////////////////////////////////////");
-    System.out.println("Gesture type: " + gesture.type());
-    System.out.println("ID: " + gesture.id());
-    System.out.println("Position: " + leap.vectorToPVector(gesture.position()));
-    System.out.println("Direction: " + gesture.direction());
-    System.out.println("Duration: " + gesture.durationSeconds() + "s");
-    System.out.println("Speed: " + gesture.speed());
-    System.out.println("//////////////////////////////////////");
-  } 
-  else if (gesture.state() == State.STATE_START)
-    sendOSCMessage("/h1swipe/");
-  else if (gesture.state() == State.STATE_UPDATE) { }
+void leapOnSwipeGesture(SwipeGesture g, int state){
+  int     id               = g.getId();
+  Finger  finger           = g.getFinger();
+  PVector position         = g.getPosition();
+  PVector positionStart    = g.getStartPosition();
+  PVector direction        = g.getDirection();
+  float   speed            = g.getSpeed();
+  long    duration         = g.getDuration();
+  float   durationSeconds  = g.getDurationInSeconds();
+
+  switch(state){
+    case 1: // Start
+      println("SwipeGesture: " + id);
+      sendOSCMessage("/h1swipe/");
+      break;
+    case 2: // Update
+      break;
+    case 3: // Stop
+      println("SwipeGesture: " + id);
+      sendOSCMessage("/h1swipe/");
+      break;
+  }
 }
 
 void sendOSCMessage(String address, float[] values) {
@@ -231,4 +260,3 @@ void mouseDragged() {
 void stop() {
   oscP5.stop();
 }
-
